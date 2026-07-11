@@ -1,0 +1,277 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --border: #d9e1ec;
+  --text: #16324f;
+  --muted: #5b6f86;
+  --primary: #2160d8;
+  --primary-dark: #1445a2;
+  --recording: #c62828;
+  --error: #e67e22;
+  --complete: #1f8f4e;
+  --shadow: 0 12px 28px rgba(18, 45, 90, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 380px;
+  min-height: 620px;
+  background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 100%);
+  color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.popup-shell {
+  padding: 16px;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hero h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.field-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+input[type='password'],
+select {
+  width: 100%;
+  border: 1px solid #c4d1e0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--text);
+}
+
+input[type='password']:focus,
+select:focus,
+button:focus-visible,
+input[type='checkbox']:focus-visible {
+  outline: 3px solid rgba(33, 96, 216, 0.25);
+  outline-offset: 2px;
+}
+
+.help-text,
+.warning-text {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.help-text {
+  color: var(--muted);
+}
+
+.warning-text {
+  color: #7a4d00;
+}
+
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  color: var(--text);
+}
+
+.consent-row input {
+  margin-top: 3px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(33, 96, 216, 0.1);
+  color: var(--primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-message {
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.stats-grid div {
+  background: #f8fbff;
+  border: 1px solid #e2ebf5;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.stats-grid dt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.stats-grid dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.button-stack,
+.button-row {
+  display: flex;
+  gap: 10px;
+}
+
+.button-stack {
+  flex-direction: column;
+}
+
+.button-row {
+  margin-top: 10px;
+}
+
+.button-row.compact {
+  margin-top: 10px;
+}
+
+button {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button,
+.danger-button {
+  flex: 1;
+}
+
+.primary-button {
+  background: var(--primary);
+  color: #fff;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.secondary-button {
+  background: #e8f0ff;
+  color: var(--primary-dark);
+}
+
+.ghost-button {
+  background: #f1f4f8;
+  color: var(--text);
+}
+
+.danger-button {
+  background: var(--recording);
+  color: #fff;
+}
+
+.error-box {
+  margin-bottom: 12px;
+  background: #fff4e8;
+  border: 1px solid #ffd2a8;
+  color: #9a4d00;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+body[data-state='idle'] .status-pill,
+body[data-state='starting'] .status-pill,
+body[data-state='stopping'] .status-pill,
+body[data-state='transcribing'] .status-pill,
+body[data-state='generating'] .status-pill {
+  background: rgba(33, 96, 216, 0.1);
+  color: var(--primary);
+}
+
+body[data-state='recording'] .status-pill {
+  background: rgba(198, 40, 40, 0.12);
+  color: var(--recording);
+}
+
+body[data-state='error'] .status-pill {
+  background: rgba(230, 126, 34, 0.14);
+  color: var(--error);
+}
+
+body[data-state='complete'] .status-pill {
+  background: rgba(31, 143, 78, 0.12);
+  color: var(--complete);
+}
