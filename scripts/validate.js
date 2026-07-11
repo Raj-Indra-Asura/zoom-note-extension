@@ -39,6 +39,18 @@ function validateManifest() {
   report(Boolean(manifest.background && manifest.background.service_worker), 'manifest has a background service worker');
   report(Boolean(manifest.action && manifest.action.default_popup), 'manifest has a default popup');
   report(Boolean(manifest.icons && Object.keys(manifest.icons).length > 0), 'manifest has icons');
+  const requiredProviderHosts = [
+    'https://api.openai.com/*',
+    'https://api.groq.com/*',
+    'https://openrouter.ai/*'
+  ];
+  for (const providerHost of requiredProviderHosts) {
+    report(manifest.host_permissions?.includes(providerHost), `manifest permits provider host: ${providerHost}`);
+  }
+  report(
+    manifest.optional_host_permissions?.includes('https://*/*'),
+    'manifest can request custom HTTPS provider access'
+  );
 
   const referencedFiles = new Set();
   if (manifest.background?.service_worker) {

@@ -45,6 +45,7 @@ const DEFAULT_STATE = {
 
 let currentState = { ...DEFAULT_STATE };
 let savedSettings = {};
+let providerSettingsDirty = false;
 let pollTimer = null;
 let tickTimer = null;
 
@@ -113,7 +114,7 @@ function requestOriginPermission(baseUrl) {
         reject(new Error('Custom base URLs must use HTTPS, or HTTP on localhost/127.0.0.1.'));
         return;
       }
-      origin = `${url.origin}/*`;
+      origin = `${url.protocol}//${url.hostname}/*`;
     } catch {
       reject(new Error('Enter a valid custom base URL.'));
       return;
@@ -142,7 +143,8 @@ function providerElements(capability) {
       baseUrlRow: elements.transcriptionBaseUrlRow,
       model: elements.transcriptionModel,
       keyStatus: elements.transcriptionKeyStatus,
-      savedKeyName: TRANSCRIPTION_API_KEY
+      savedKeyName: TRANSCRIPTION_API_KEY,
+      savedProviderName: TRANSCRIPTION_PROVIDER_KEY
     };
   }
   return {
@@ -152,8 +154,19 @@ function providerElements(capability) {
     baseUrlRow: elements.notesBaseUrlRow,
     model: elements.notesModel,
     keyStatus: elements.notesKeyStatus,
-    savedKeyName: NOTES_API_KEY
+    savedKeyName: NOTES_API_KEY,
+    savedProviderName: NOTES_PROVIDER_KEY
   };
+}
+
+function effectiveApiKey(fields) {
+  const providerUnchanged = (savedSettings[fields.savedProviderName]
+    || (fields.savedProviderName === TRANSCRIPTION_PROVIDER_KEY
+      ? DEFAULT_TRANSCRIPTION_PROVIDER
+      : DEFAULT_NOTES_PROVIDER)) === fields.provider.value;
+  return fields.apiKey.value.trim()
+    || (providerUnchanged ? savedSettings[fields.savedKeyName] : '')
+    || '';
 }
 
 function updateProviderFields(capability, resetDefaults = false) {
@@ -162,10 +175,18 @@ function updateProviderFields(capability, resetDefaults = false) {
   const isCustom = fields.provider.value === 'custom';
   fields.baseUrlRow.hidden = !isCustom;
   if (resetDefaults && provider) {
+    providerSettingsDirty = true;
+    fields.apiKey.value = '';
     fields.baseUrl.value = provider.baseUrl;
     fields.model.value = capability === 'transcription' ? provider.transcriptionModel : provider.notesModel;
   }
+  fields.keyStatus.textContent = maskApiKey(effectiveApiKey(fields));
   updateConsentText();
+  updateActionButtons();
+}
+
+function markProviderSettingsDirty() {
+  providerSettingsDirty = true;
   updateActionButtons();
 }
 
@@ -190,7 +211,7 @@ function isProviderReady(capability) {
   if (!supportsCapability || !fields.model.value.trim()) {
     return false;
   }
-  const apiKey = fields.apiKey.value.trim() || savedSettings[fields.savedKeyName] || '';
+  const apiKey = effectiveApiKey(fields);
   if (provider.requiresApiKey && !apiKey.trim()) {
     return false;
   }
@@ -237,7 +258,9 @@ function getStatusMessage(state) {
 
 function updateActionButtons() {
   const consentChecked = elements.consentCheckbox.checked;
-  const providersReady = isProviderReady('transcription') && isProviderReady('notes');
+  const providersReady = !providerSettingsDirty
+    && isProviderReady('transcription')
+    && isProviderReady('notes');
   const canStart = currentState.status === 'idle' && providersReady && consentChecked;
   const isActive = ACTIVE_STATES.has(currentState.status);
   const showDownloads = currentState.status === 'complete';
@@ -328,6 +351,9 @@ async function loadSettings() {
 
 async function saveProviders() {
   try {
+    if (!isProviderReady('transcription') || !isProviderReady('notes')) {
+      throw new Error('Complete both provider configurations before saving.');
+    }
     for (const capability of ['transcription', 'notes']) {
       const fields = providerElements(capability);
       if (fields.provider.value === 'custom') {
@@ -335,12 +361,8 @@ async function saveProviders() {
       }
     }
 
-    const transcriptionApiKey = elements.transcriptionApiKey.value.trim()
-      || savedSettings[TRANSCRIPTION_API_KEY]
-      || '';
-    const notesApiKey = elements.notesApiKey.value.trim()
-      || savedSettings[NOTES_API_KEY]
-      || '';
+    const transcriptionApiKey = effectiveApiKey(providerElements('transcription'));
+    const notesApiKey = effectiveApiKey(providerElements('notes'));
     const values = {
       [TRANSCRIPTION_PROVIDER_KEY]: elements.transcriptionProvider.value,
       [TRANSCRIPTION_API_KEY]: transcriptionApiKey,
@@ -354,6 +376,7 @@ async function saveProviders() {
     await storageSet(values);
     await storageRemove(API_KEY_KEY);
     savedSettings = { ...savedSettings, ...values };
+    providerSettingsDirty = false;
     elements.transcriptionApiKey.value = '';
     elements.notesApiKey.value = '';
     elements.transcriptionKeyStatus.textContent = maskApiKey(transcriptionApiKey);
@@ -365,6 +388,7 @@ async function saveProviders() {
 }
 
 async function removeApiKeys() {
+  const wasDirty = providerSettingsDirty;
   await storageRemove([API_KEY_KEY, TRANSCRIPTION_API_KEY, NOTES_API_KEY]);
   delete savedSettings[API_KEY_KEY];
   delete savedSettings[TRANSCRIPTION_API_KEY];
@@ -373,6 +397,7 @@ async function removeApiKeys() {
   elements.notesApiKey.value = '';
   elements.transcriptionKeyStatus.textContent = maskApiKey('');
   elements.notesKeyStatus.textContent = maskApiKey('');
+  providerSettingsDirty = wasDirty;
   renderState({ ...currentState, error: null });
 }
 
@@ -441,7 +466,7 @@ function registerListeners() {
     elements.notesBaseUrl,
     elements.notesModel
   ]) {
-    input.addEventListener('input', updateActionButtons);
+    input.addEventListener('input', markProviderSettingsDirty);
   }
   elements.chunkDuration.addEventListener('change', () => void saveChunkDuration());
   elements.consentCheckbox.addEventListener('change', updateActionButtons);

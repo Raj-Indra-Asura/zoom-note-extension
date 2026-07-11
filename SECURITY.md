@@ -2,7 +2,7 @@
 
 ## Client-side API key risk
 
-This extension stores and uses an OpenAI API key in the browser. That is convenient for development, but it also means the key may be extractable by someone with local access to your browser profile or extension environment. Treat this architecture as a demo or internal prototype.
+This extension stores and uses provider API keys in the browser. That is convenient for personal use and development, but keys may be extractable by someone with local access to the browser profile or extension environment. Use low-privilege keys and provider spending limits where available.
 
 ## Production recommendation
 
@@ -23,7 +23,10 @@ The extension requests only the permissions needed for this workflow:
 - `storage` for local settings and session persistence
 - `downloads` to save transcript and notes
 - `offscreen` to host media capture and recording logic
-- `https://api.openai.com/*` host access for API requests
+- `https://api.openai.com/*`, `https://api.groq.com/*`, and `https://openrouter.ai/*` for built-in provider requests
+- Optional HTTPS or localhost host access, requested only when the user saves a custom provider endpoint
+
+Remote custom providers must use HTTPS. Plain HTTP is limited to `localhost` and `127.0.0.1`.
 
 ## Responsible disclosure
 

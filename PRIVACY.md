@@ -6,13 +6,13 @@ Lecture Note Agent captures audio from the active browser tab only after you cli
 
 ## Where data is sent
 
-Recorded audio chunks, transcript prompts, and note-generation prompts are sent to the OpenAI API at `https://api.openai.com`.
+Recorded audio chunks are sent to the transcription provider you select. The resulting transcript and note-generation prompt are sent to the note provider you select. Built-in providers are OpenAI, Groq, and OpenRouter; a user-configured OpenAI-compatible endpoint may also be used.
 
 ## What is stored locally
 
 The extension stores the following in `chrome.storage.local`:
 
-- Your OpenAI API key
+- Selected providers, models, base URLs, and provider API keys
 - Chunk duration preference
 - Session state metadata
 - Generated transcript content
@@ -31,8 +31,8 @@ Data remains stored locally until you remove it, clear browser extension storage
 
 ## Analytics and telemetry
 
-This project includes no analytics, no advertising SDKs, and no external telemetry beyond the direct OpenAI API requests required for transcription and note generation.
+This project includes no analytics, advertising SDKs, or external telemetry. Network requests are limited to the provider endpoints selected by the user for transcription and note generation.
 
 ## Affiliation statement
 
-This project is not affiliated with Zoom, OpenAI, Microsoft, or Google.
+This project is not affiliated with Zoom, OpenAI, Groq, OpenRouter, Microsoft, or Google.

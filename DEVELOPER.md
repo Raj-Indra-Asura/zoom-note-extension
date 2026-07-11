@@ -30,9 +30,18 @@ idle -> starting -> recording -> stopping -> transcribing -> generating -> compl
 
 States: `idle | starting | recording | stopping | transcribing | generating | complete | error`
 
-## Models and endpoints
+## Providers, models, and endpoints
 
-Change model or endpoint constants in `src/constants.js`.
+Built-in provider defaults live in `src/constants.js`. Transcription and note generation have independent settings. API calls use OpenAI-compatible `/audio/transcriptions` and `/chat/completions` paths.
+
+To add a built-in provider:
+
+1. Add its capability flags, base URL, default models, and key requirement to `PROVIDERS`.
+2. Add the provider to the appropriate popup selector.
+3. Add its origin to `host_permissions` and `connect-src`.
+4. Add validation coverage and update the README provider table.
+
+Custom remote endpoints require HTTPS and request optional host access from the save-button user gesture. Local HTTP is limited to `localhost` and `127.0.0.1`.
 
 ## Chunk duration defaults
 
@@ -43,7 +52,7 @@ Change model or endpoint constants in `src/constants.js`.
 ## Architecture
 
 - `src/popup.js` manages user interaction and renders persisted state.
-- `src/service_worker.js` owns the workflow, state persistence, OpenAI calls, downloads, and tab interruption handling.
+- `src/service_worker.js` owns the workflow, state persistence, provider calls, downloads, and tab interruption handling.
 - `src/offscreen.js` only manages media capture, chunk rotation, and chunk serialization.
 - `chrome.storage.local` is the persistence layer for settings, session state, and generated artifacts.
 

@@ -7,7 +7,13 @@
 - [ ] Short session under 3 minutes records a single chunk
 - [ ] Long session over 6 minutes records multiple chunks
 - [ ] Audio remains audible during recording
-- [ ] Start button stays disabled without a saved API key
+- [ ] Start button stays disabled until both provider configurations are saved
+- [ ] Existing OpenAI-only settings migrate to both provider key fields
+- [ ] Groq transcription and note generation complete successfully
+- [ ] Groq transcription plus OpenRouter note generation completes successfully
+- [ ] Custom HTTPS provider requests and receives host permission
+- [ ] Keyless localhost custom endpoint can be saved
+- [ ] Insecure remote HTTP custom endpoint is rejected
 - [ ] Start button stays disabled without consent checked
 - [ ] Closing the lecture tab stops or finalizes the session safely
 - [ ] Simulated network/API error moves the session to error state

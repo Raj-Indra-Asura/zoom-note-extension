@@ -33,6 +33,7 @@ const SETTINGS_KEYS = [
 const NOTES_KEY = 'sessionNotes';
 const TRANSCRIPT_KEY = 'sessionTranscript';
 const FILES_KEY = 'sessionFiles';
+const SESSION_RUNTIME_KEY = 'sessionRuntime';
 const DEFAULT_STATE = {
   status: 'idle',
   tabTitle: '',
@@ -105,6 +106,40 @@ function storageRemove(keys) {
       resolve();
     });
   });
+}
+
+async function persistSessionRuntime() {
+  await storageSet({
+    [SESSION_RUNTIME_KEY]: {
+      tabId: sessionRuntime.tabId,
+      tabTitle: sessionRuntime.tabTitle,
+      startTime: sessionRuntime.startTime,
+      chunkDuration: sessionRuntime.chunkDuration,
+      transcriptSegments: sessionRuntime.transcriptSegments,
+      processedChunks: sessionRuntime.processedChunks,
+      receivedChunks: sessionRuntime.receivedChunks,
+      interruptionReason: sessionRuntime.interruptionReason,
+      shouldFinalize: sessionRuntime.shouldFinalize,
+      transcriptionConfig: sessionRuntime.transcriptionConfig,
+      notesConfig: sessionRuntime.notesConfig
+    }
+  });
+}
+
+async function hydrateSessionRuntime() {
+  if (sessionRuntime.transcriptionConfig && sessionRuntime.notesConfig) {
+    return;
+  }
+  const stored = await storageGet(SESSION_RUNTIME_KEY);
+  const snapshot = stored[SESSION_RUNTIME_KEY];
+  if (!snapshot?.transcriptionConfig || !snapshot?.notesConfig) {
+    throw new Error('The saved provider configuration for this recording is unavailable. Start a new recording.');
+  }
+  sessionRuntime = {
+    ...createSessionRuntime(),
+    ...snapshot,
+    transcriptSegments: Array.isArray(snapshot.transcriptSegments) ? snapshot.transcriptSegments : []
+  };
 }
 
 function sendRuntimeMessage(message) {
@@ -512,6 +547,7 @@ async function downloadFile(content, filename, mimeType) {
 
 async function resetRuntimeState() {
   sessionRuntime = createSessionRuntime();
+  await storageRemove(SESSION_RUNTIME_KEY);
   await closeOffscreenDocument().catch(() => {});
 }
 
@@ -581,6 +617,7 @@ async function startRecording() {
   sessionRuntime.chunkDuration = Number(settings[CHUNK_DURATION_KEY] || DEFAULT_CHUNK_DURATION);
   sessionRuntime.transcriptionConfig = resolveProviderConfig(settings, 'transcription');
   sessionRuntime.notesConfig = resolveProviderConfig(settings, 'notes');
+  await persistSessionRuntime();
 
   await sendRuntimeMessage({
     type: 'OFFSCREEN_START',
@@ -600,12 +637,14 @@ async function startRecording() {
 }
 
 async function stopRecording(reason = '') {
+  await hydrateSessionRuntime();
   const state = await getState();
   if (!ACTIVE_STATES.has(state.status) && state.status !== 'recording') {
     throw new Error('There is no active recording to stop.');
   }
   sessionRuntime.interruptionReason = reason;
   sessionRuntime.shouldFinalize = true;
+  await persistSessionRuntime();
   await updateState({
     ...state,
     status: 'stopping',
@@ -628,6 +667,7 @@ async function cancelRecording() {
 }
 
 async function handleChunkReady(message) {
+  await hydrateSessionRuntime();
   sessionRuntime.receivedChunks = Math.max(sessionRuntime.receivedChunks, message.chunkIndex + 1);
   await updateState({
     ...(await getState()),
@@ -643,6 +683,7 @@ async function handleChunkReady(message) {
       text
     };
     sessionRuntime.processedChunks += 1;
+    await persistSessionRuntime();
     await updateState({
       ...(await getState()),
       chunksRecorded: sessionRuntime.receivedChunks,
@@ -652,14 +693,15 @@ async function handleChunkReady(message) {
   })();
 
   sessionRuntime.pendingChunkPromises.set(message.chunkIndex, pendingTask);
-  pendingTask.catch((error) => {
-    void handleFatalError(error);
-  }).finally(() => {
+  try {
+    await pendingTask;
+  } finally {
     sessionRuntime.pendingChunkPromises.delete(message.chunkIndex);
-  });
+  }
 }
 
 async function finalizeSession() {
+  await hydrateSessionRuntime();
   const state = await getState();
   await updateState({
     ...state,
@@ -735,6 +777,7 @@ async function clearSession() {
 }
 
 async function handleTabInterrupted(tabId, reason) {
+  await hydrateSessionRuntime().catch(() => {});
   if (sessionRuntime.tabId !== tabId) {
     return;
   }
