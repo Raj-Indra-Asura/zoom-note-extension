@@ -1,15 +1,35 @@
 import {
-  OPENAI_TRANSCRIPTION_URL,
-  OPENAI_CHAT_URL,
-  TRANSCRIPTION_MODEL,
-  CHAT_MODEL,
+  DEFAULT_TRANSCRIPTION_PROVIDER,
+  DEFAULT_NOTES_PROVIDER,
   DEFAULT_CHUNK_DURATION,
-  ALLOWED_CHUNK_DURATIONS
+  ALLOWED_CHUNK_DURATIONS,
+  getProvider,
+  joinApiUrl
 } from './constants.js';
 
 const STATE_KEY = 'sessionState';
 const API_KEY_KEY = 'apiKey';
 const CHUNK_DURATION_KEY = 'chunkDuration';
+const TRANSCRIPTION_PROVIDER_KEY = 'transcriptionProvider';
+const TRANSCRIPTION_API_KEY = 'transcriptionApiKey';
+const TRANSCRIPTION_BASE_URL_KEY = 'transcriptionBaseUrl';
+const TRANSCRIPTION_MODEL_KEY = 'transcriptionModel';
+const NOTES_PROVIDER_KEY = 'notesProvider';
+const NOTES_API_KEY = 'notesApiKey';
+const NOTES_BASE_URL_KEY = 'notesBaseUrl';
+const NOTES_MODEL_KEY = 'notesModel';
+const SETTINGS_KEYS = [
+  API_KEY_KEY,
+  CHUNK_DURATION_KEY,
+  TRANSCRIPTION_PROVIDER_KEY,
+  TRANSCRIPTION_API_KEY,
+  TRANSCRIPTION_BASE_URL_KEY,
+  TRANSCRIPTION_MODEL_KEY,
+  NOTES_PROVIDER_KEY,
+  NOTES_API_KEY,
+  NOTES_BASE_URL_KEY,
+  NOTES_MODEL_KEY
+];
 const NOTES_KEY = 'sessionNotes';
 const TRANSCRIPT_KEY = 'sessionTranscript';
 const FILES_KEY = 'sessionFiles';
@@ -53,7 +73,9 @@ function createSessionRuntime() {
     processedChunks: 0,
     receivedChunks: 0,
     interruptionReason: '',
-    shouldFinalize: false
+    shouldFinalize: false,
+    transcriptionConfig: null,
+    notesConfig: null
   };
 }
 
@@ -244,10 +266,62 @@ async function closeOffscreenDocument() {
   offscreenReadyResolver = null;
 }
 
+function isAllowedCustomBaseUrl(baseUrl) {
+  try {
+    const url = new URL(baseUrl);
+    return url.protocol === 'https:'
+      || (url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1'));
+  } catch {
+    return false;
+  }
+}
+
+function resolveProviderConfig(settings, capability) {
+  const isTranscription = capability === 'transcription';
+  const providerKey = isTranscription ? TRANSCRIPTION_PROVIDER_KEY : NOTES_PROVIDER_KEY;
+  const apiKeyKey = isTranscription ? TRANSCRIPTION_API_KEY : NOTES_API_KEY;
+  const baseUrlKey = isTranscription ? TRANSCRIPTION_BASE_URL_KEY : NOTES_BASE_URL_KEY;
+  const modelKey = isTranscription ? TRANSCRIPTION_MODEL_KEY : NOTES_MODEL_KEY;
+  const defaultProvider = isTranscription ? DEFAULT_TRANSCRIPTION_PROVIDER : DEFAULT_NOTES_PROVIDER;
+  const providerId = settings[providerKey] || defaultProvider;
+  const provider = getProvider(providerId);
+  if (!provider) {
+    throw new Error(`Unknown ${capability} provider.`);
+  }
+  if (isTranscription && !provider.supportsTranscription) {
+    throw new Error(`${provider.name} does not support the audio transcription endpoint. Choose a different transcription provider.`);
+  }
+  if (!isTranscription && !provider.supportsNotes) {
+    throw new Error(`${provider.name} does not support note generation.`);
+  }
+
+  const apiKey = String(settings[apiKeyKey] || settings[API_KEY_KEY] || '').trim();
+  const baseUrl = String(settings[baseUrlKey] || provider.baseUrl || '').trim().replace(/\/+$/, '');
+  const defaultModel = isTranscription ? provider.transcriptionModel : provider.notesModel;
+  const model = String(settings[modelKey] || defaultModel || '').trim();
+
+  if (provider.requiresApiKey && !apiKey) {
+    throw new Error(`Missing ${provider.name} API key for ${capability}. Save the provider settings in the popup first.`);
+  }
+  if (!baseUrl) {
+    throw new Error(`Missing base URL for ${capability}.`);
+  }
+  if (providerId === 'custom' && !isAllowedCustomBaseUrl(baseUrl)) {
+    throw new Error('Custom base URLs must use HTTPS, or HTTP on localhost/127.0.0.1.');
+  }
+  if (!model) {
+    throw new Error(`Missing model name for ${capability}.`);
+  }
+
+  return { providerId, providerName: provider.name, apiKey, baseUrl, model };
+}
+
 function validateSettings(settings) {
-  const apiKey = typeof settings.apiKey === 'string' ? settings.apiKey.trim() : '';
-  if (!apiKey) {
-    return 'Missing OpenAI API key. Save an API key in the popup first.';
+  try {
+    resolveProviderConfig(settings, 'transcription');
+    resolveProviderConfig(settings, 'notes');
+  } catch (error) {
+    return error.message;
   }
   const duration = Number(settings.chunkDuration || DEFAULT_CHUNK_DURATION);
   if (!ALLOWED_CHUNK_DURATIONS.includes(duration)) {
@@ -330,7 +404,21 @@ async function parseApiError(responseOrError) {
   return responseOrError.message || `Request failed (${responseOrError.status || 'unknown'})`;
 }
 
-async function transcribeChunk(base64Audio, chunkIndex, apiKey) {
+function buildApiHeaders(config, json = false) {
+  const headers = {};
+  if (config.apiKey) {
+    headers.Authorization = 'Bearer ' + config.apiKey;
+  }
+  if (json) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (config.providerId === 'openrouter') {
+    headers['X-Title'] = 'Lecture Note Agent';
+  }
+  return headers;
+}
+
+async function transcribeChunk(base64Audio, chunkIndex, config) {
   const binaryStr = atob(base64Audio);
   const bytes = new Uint8Array(binaryStr.length);
   for (let i = 0; i < binaryStr.length; i += 1) {
@@ -342,15 +430,15 @@ async function transcribeChunk(base64Audio, chunkIndex, apiKey) {
   }
 
   const formData = new FormData();
-  formData.append('model', TRANSCRIPTION_MODEL);
+  formData.append('model', config.model);
   formData.append('file', blob, `chunk_${chunkIndex}.webm`);
   formData.append('response_format', 'text');
 
   let response;
   try {
-    response = await fetch(OPENAI_TRANSCRIPTION_URL, {
+    response = await fetch(joinApiUrl(config.baseUrl, 'audio/transcriptions'), {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + apiKey },
+      headers: buildApiHeaders(config),
       body: formData
     });
   } catch (error) {
@@ -363,7 +451,7 @@ async function transcribeChunk(base64Audio, chunkIndex, apiKey) {
   return response.text();
 }
 
-async function generateNotes(transcript, title, apiKey) {
+async function generateNotes(transcript, title, config) {
   const prompt = [
     `Lecture title: ${title || 'Untitled lecture'}`,
     '',
@@ -381,14 +469,11 @@ async function generateNotes(transcript, title, apiKey) {
 
   let response;
   try {
-    response = await fetch(OPENAI_CHAT_URL, {
+    response = await fetch(joinApiUrl(config.baseUrl, 'chat/completions'), {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + apiKey,
-        'Content-Type': 'application/json'
-      },
+      headers: buildApiHeaders(config, true),
       body: JSON.stringify({
-        model: CHAT_MODEL,
+        model: config.model,
         messages: [
           {
             role: 'system',
@@ -464,8 +549,9 @@ async function startRecording() {
   await clearArtifacts();
   await updateState({ ...DEFAULT_STATE, status: 'starting', error: null, badgeText: '' });
 
-  const settings = await storageGet([API_KEY_KEY, CHUNK_DURATION_KEY]);
+  const settings = await storageGet(SETTINGS_KEYS);
   const validationError = validateSettings({
+    ...settings,
     apiKey: settings[API_KEY_KEY],
     chunkDuration: settings[CHUNK_DURATION_KEY]
   });
@@ -493,6 +579,8 @@ async function startRecording() {
   sessionRuntime.tabTitle = tabTitle;
   sessionRuntime.startTime = startTime;
   sessionRuntime.chunkDuration = Number(settings[CHUNK_DURATION_KEY] || DEFAULT_CHUNK_DURATION);
+  sessionRuntime.transcriptionConfig = resolveProviderConfig(settings, 'transcription');
+  sessionRuntime.notesConfig = resolveProviderConfig(settings, 'notes');
 
   await sendRuntimeMessage({
     type: 'OFFSCREEN_START',
@@ -548,9 +636,7 @@ async function handleChunkReady(message) {
   });
 
   const pendingTask = (async () => {
-    const settings = await storageGet(API_KEY_KEY);
-    const apiKey = settings[API_KEY_KEY] || '';
-    const text = await transcribeChunk(message.blob, message.chunkIndex, apiKey);
+    const text = await transcribeChunk(message.blob, message.chunkIndex, sessionRuntime.transcriptionConfig);
     sessionRuntime.transcriptSegments[message.chunkIndex] = {
       index: message.chunkIndex,
       startTime: Number(message.startTime || 0),
@@ -589,15 +675,12 @@ async function finalizeSession() {
     ? `# Transcript\n\n${transcriptBody}`
     : '# Transcript\n\nNo speech was detected in the captured audio.';
 
-  const settings = await storageGet(API_KEY_KEY);
-  const apiKey = settings[API_KEY_KEY] || '';
-
   let notes;
   if (!transcriptBody) {
     notes = `# ${sessionRuntime.tabTitle || 'Lecture'} Notes\n\n_No lecture content could be transcribed from the captured audio._`;
   } else {
     await updateState({ ...(await getState()), status: 'generating', badgeText: '…' });
-    notes = await generateNotes(transcriptBody, sessionRuntime.tabTitle, apiKey);
+    notes = await generateNotes(transcriptBody, sessionRuntime.tabTitle, sessionRuntime.notesConfig);
   }
 
   const timestamp = sessionRuntime.startTime || new Date().toISOString();

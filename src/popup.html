@@ -21,16 +21,50 @@
 
       <section class="panel" aria-labelledby="api-heading">
         <div class="panel-header">
-          <h2 id="api-heading">OpenAI API key</h2>
+          <h2 id="api-heading">AI providers</h2>
         </div>
-        <label class="field-label" for="api-key">API key</label>
-        <input id="api-key" name="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste sk-... key">
-        <p id="api-key-status" class="help-text">No key saved.</p>
+        <fieldset>
+          <legend>Audio transcription</legend>
+          <label class="field-label" for="transcription-provider">Provider</label>
+          <select id="transcription-provider" name="transcription-provider">
+            <option value="openai">OpenAI</option>
+            <option value="groq">Groq</option>
+            <option value="custom">Custom OpenAI-compatible</option>
+          </select>
+          <div id="transcription-base-url-row" class="conditional-field" hidden>
+            <label class="field-label" for="transcription-base-url">Base URL</label>
+            <input id="transcription-base-url" name="transcription-base-url" type="url" autocomplete="url" spellcheck="false" placeholder="https://provider.example/v1">
+          </div>
+          <label class="field-label" for="transcription-model">Model</label>
+          <input id="transcription-model" name="transcription-model" type="text" autocomplete="off" spellcheck="false">
+          <label class="field-label" for="transcription-api-key">API key <span class="optional-label">(optional for custom/local)</span></label>
+          <input id="transcription-api-key" name="transcription-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste provider key">
+          <p id="transcription-key-status" class="help-text">No key saved.</p>
+        </fieldset>
+        <fieldset>
+          <legend>Note generation</legend>
+          <label class="field-label" for="notes-provider">Provider</label>
+          <select id="notes-provider" name="notes-provider">
+            <option value="openai">OpenAI</option>
+            <option value="groq">Groq</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="custom">Custom OpenAI-compatible</option>
+          </select>
+          <div id="notes-base-url-row" class="conditional-field" hidden>
+            <label class="field-label" for="notes-base-url">Base URL</label>
+            <input id="notes-base-url" name="notes-base-url" type="url" autocomplete="url" spellcheck="false" placeholder="https://provider.example/v1">
+          </div>
+          <label class="field-label" for="notes-model">Model</label>
+          <input id="notes-model" name="notes-model" type="text" autocomplete="off" spellcheck="false">
+          <label class="field-label" for="notes-api-key">API key <span class="optional-label">(optional for custom/local)</span></label>
+          <input id="notes-api-key" name="notes-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste provider key">
+          <p id="notes-key-status" class="help-text">No key saved.</p>
+        </fieldset>
         <div class="button-row compact">
-          <button id="save-key" type="button" class="secondary-button">Save key</button>
-          <button id="remove-key" type="button" class="ghost-button">Remove key</button>
+          <button id="save-providers" type="button" class="secondary-button">Save providers</button>
+          <button id="remove-keys" type="button" class="ghost-button">Remove keys</button>
         </div>
-        <p class="warning-text">Billing applies to OpenAI API usage. This demo stores your key in local browser extension storage on this device.</p>
+        <p class="warning-text">Provider keys are stored in local extension storage. Free credits and rate limits vary; the extension cannot guarantee zero cost.</p>
       </section>
 
       <section class="panel" aria-labelledby="settings-heading">
@@ -46,7 +80,7 @@
         </select>
         <label class="consent-row" for="consent-checkbox">
           <input id="consent-checkbox" type="checkbox">
-          <span>I understand this extension will capture audio from the active browser tab and send it to OpenAI for transcription and note generation.</span>
+          <span id="consent-text">I understand this extension will capture audio from the active browser tab and send it to my selected providers.</span>
         </label>
       </section>
 
@@ -88,6 +122,6 @@
         </div>
       </section>
     </main>
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
   </body>
 </html>

@@ -4,7 +4,16 @@
   "version": "0.1.0",
   "description": "Capture browser-tab audio from a lecture, transcribe it, and generate Markdown notes. Works with any browser-tab-based class or conference.",
   "permissions": ["tabCapture", "activeTab", "storage", "downloads", "offscreen"],
-  "host_permissions": ["https://api.openai.com/*"],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "https://api.groq.com/*",
+    "https://openrouter.ai/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
   "action": {
     "default_title": "Lecture Note Agent",
     "default_popup": "src/popup.html",
@@ -26,6 +35,6 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "default-src 'self'; connect-src https://api.openai.com; script-src 'self'; style-src 'self'"
+    "extension_pages": "default-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; script-src 'self'; style-src 'self'"
   }
 }

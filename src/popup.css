@@ -32,6 +32,18 @@ select {
   font: inherit;
 }
 
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 0 0 12px;
+  padding: 10px;
+}
+
+legend {
+  font-weight: 700;
+  padding: 0 5px;
+}
+
 .popup-shell {
   padding: 16px;
 }
@@ -83,6 +95,8 @@ select {
 }
 
 input[type='password'],
+input[type='text'],
+input[type='url'],
 select {
   width: 100%;
   border: 1px solid #c4d1e0;
@@ -93,11 +107,27 @@ select {
 }
 
 input[type='password']:focus,
+input[type='text']:focus,
+input[type='url']:focus,
 select:focus,
 button:focus-visible,
 input[type='checkbox']:focus-visible {
   outline: 3px solid rgba(33, 96, 216, 0.25);
   outline-offset: 2px;
+}
+
+.field-label:not(:first-of-type) {
+  margin-top: 10px;
+}
+
+.conditional-field {
+  margin-top: 10px;
+}
+
+.optional-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .help-text,
