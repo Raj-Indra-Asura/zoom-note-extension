@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lecture Note Agent</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body data-state="idle">
+    <main class="popup-shell">
+      <header class="hero">
+        <div>
+          <h1>Lecture Note Agent</h1>
+          <p class="subtitle">Record tab audio, transcribe it, and generate Markdown lecture notes.</p>
+        </div>
+        <div class="status-pill" id="status-pill">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="status-label">Idle</span>
+        </div>
+      </header>
+
+      <section class="panel" aria-labelledby="api-heading">
+        <div class="panel-header">
+          <h2 id="api-heading">OpenAI API key</h2>
+        </div>
+        <label class="field-label" for="api-key">API key</label>
+        <input id="api-key" name="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste sk-... key">
+        <p id="api-key-status" class="help-text">No key saved.</p>
+        <div class="button-row compact">
+          <button id="save-key" type="button" class="secondary-button">Save key</button>
+          <button id="remove-key" type="button" class="ghost-button">Remove key</button>
+        </div>
+        <p class="warning-text">Billing applies to OpenAI API usage. This demo stores your key in local browser extension storage on this device.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="settings-heading">
+        <div class="panel-header">
+          <h2 id="settings-heading">Recording settings</h2>
+        </div>
+        <label class="field-label" for="chunk-duration">Chunk duration</label>
+        <select id="chunk-duration" name="chunk-duration">
+          <option value="60">60 seconds</option>
+          <option value="120">120 seconds</option>
+          <option value="180" selected>180 seconds</option>
+          <option value="300">300 seconds</option>
+        </select>
+        <label class="consent-row" for="consent-checkbox">
+          <input id="consent-checkbox" type="checkbox">
+          <span>I understand this extension will capture audio from the active browser tab and send it to OpenAI for transcription and note generation.</span>
+        </label>
+      </section>
+
+      <section class="panel" aria-labelledby="session-heading">
+        <div class="panel-header">
+          <h2 id="session-heading">Session</h2>
+        </div>
+        <div id="status-message" class="status-message" aria-live="polite">Ready when you are.</div>
+        <dl class="stats-grid">
+          <div>
+            <dt>Elapsed</dt>
+            <dd id="elapsed-time">00:00</dd>
+          </div>
+          <div>
+            <dt>Chunks recorded</dt>
+            <dd id="chunks-recorded">0</dd>
+          </div>
+          <div>
+            <dt>Chunks processed</dt>
+            <dd id="chunks-processed">0</dd>
+          </div>
+          <div>
+            <dt>Lecture tab</dt>
+            <dd id="tab-title">—</dd>
+          </div>
+        </dl>
+        <div id="error-message" class="error-box" role="alert" hidden></div>
+        <div class="button-stack">
+          <button id="start-recording" type="button" class="primary-button">Start recording</button>
+          <button id="stop-recording" type="button" class="danger-button" hidden>Stop &amp; generate</button>
+          <button id="cancel-recording" type="button" class="ghost-button" hidden>Cancel / discard</button>
+        </div>
+        <div class="button-row">
+          <button id="download-notes" type="button" class="secondary-button" hidden>Download notes</button>
+          <button id="download-transcript" type="button" class="secondary-button" hidden>Download transcript</button>
+        </div>
+        <div class="button-row">
+          <button id="clear-session" type="button" class="ghost-button">Clear session</button>
+        </div>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

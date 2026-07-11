@@ -1,0 +1,21 @@
+{
+  "name": "zoom-note-extension",
+  "version": "0.1.0",
+  "description": "Chrome/Edge MV3 extension for lecture transcription and note generation",
+  "private": true,
+  "scripts": {
+    "lint": "eslint src/ scripts/ tests/",
+    "test": "jest",
+    "validate": "node scripts/validate.js",
+    "generate-icons": "node scripts/generate-icons.js",
+    "check": "npm run lint && npm run validate && npm test"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.js"]
+  }
+}

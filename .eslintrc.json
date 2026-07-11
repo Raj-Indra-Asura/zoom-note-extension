@@ -1,0 +1,31 @@
+{
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "webextensions": true,
+    "serviceworker": true,
+    "node": false
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-var": "error",
+    "prefer-const": "warn",
+    "no-unused-vars": "warn",
+    "no-console": "off"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/**/*.js", "tests/**/*.js"],
+      "env": {
+        "node": true,
+        "browser": false
+      },
+      "parserOptions": {
+        "sourceType": "script"
+      }
+    }
+  ]
+}
